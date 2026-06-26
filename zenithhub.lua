@@ -1,10 +1,10 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "Zenith Hub",
+   Name = "My Tycoon Hub",
    Icon = 0,
-   LoadingTitle = "Sell Lemons Script",
-   LoadingSubtitle = "Monarchs",
+   LoadingTitle = "Tycoon Script",
+   LoadingSubtitle = "Auto Upgrade",
    ShowText = "Hub",
    Theme = "Default",
    ToggleUIKeybind = "Z",
@@ -230,42 +230,71 @@ local autoBuyEnabled = false
 local upgradeLoopDelay = 2
 local upgradeTimes = 1
 
-local purchaseNames = {
-   "Lemon Depot",
-   "Lemon Labs",
-   "Lemon Republic",
-   "Lemon Robotics",
-   "Lemon Stand",
-   "Lemon Trading",
+-- Names must match exactly the folder names under PlayerGui.Manage.ManageMenu.Body.Frame.Manage
+local upgradeNames = {
    "LemonDash",
+   "LemonDepot",
+   "LemonLabs",
+   "LemonRepublic",
+   "LemonRobotics",
+   "LemonStand",
+   "LemonTrading",
    "LemonX",
 }
 
-local function buyAllUpgrades()
-   local myTycoon = getMyTycoon()
-   if not myTycoon then
-      notify("Error", "Could not find your tycoon!", "alert-circle")
-      return
-   end
-
-   local purchases = myTycoon:FindFirstChild("Purchases")
-   if not purchases then
-      notify("Error", "No Purchases folder found!", "alert-circle")
-      return
-   end
-
-   for _, name in ipairs(purchaseNames) do
-      local success, err = pcall(function()
-         local prompt = purchases[name][name][name].Prompt
-         for i = 1, upgradeTimes do
-            fireproximityprompt(prompt)
-            task.wait(0.1)
-         end
+local function clickUpgradeButton(name)
+   local success, err = pcall(function()
+      local gui = localPlayer.PlayerGui
+      local btn = gui.Manage.ManageMenu.Body.Frame.Manage[name].Upgrade
+      -- Use firesignal or simulate a mouse click on the ImageButton
+      local vButton = btn
+      vButton.MouseButton1Click:Fire()
+   end)
+   if not success then
+      -- Fallback: try fireclick via VirtualUser if MouseButton1Click:Fire() isn't enough
+      local ok, e2 = pcall(function()
+         local gui = localPlayer.PlayerGui
+         local btn = gui.Manage.ManageMenu.Body.Frame.Manage[name].Upgrade
+         local VirtualUser = game:GetService("VirtualUser")
+         local pos = btn.AbsolutePosition + (btn.AbsoluteSize / 2)
+         VirtualUser:Button1Down(pos, workspace.CurrentCamera.CFrame)
+         task.wait(0.05)
+         VirtualUser:Button1Up(pos, workspace.CurrentCamera.CFrame)
       end)
-      if not success then
-         warn("Failed on " .. name .. ": " .. tostring(err))
+      if not ok then
+         warn("buyAllUpgrades failed on [" .. name .. "]: " .. tostring(e2))
       end
-      task.wait(0.1)
+   end
+end
+
+local function buyAllUpgrades()
+   -- Check the Manage GUI is open; if not, skip silently
+   local gui = localPlayer.PlayerGui
+   local manageGui = gui:FindFirstChild("Manage")
+   if not manageGui or not manageGui.Enabled then
+      notify("Upgrades", "Open the Manage GUI first!", "alert-circle")
+      return
+   end
+
+   local manageFrame = manageGui:FindFirstChild("ManageMenu")
+      and manageGui.ManageMenu:FindFirstChild("Body")
+      and manageGui.ManageMenu.Body:FindFirstChild("Frame")
+      and manageGui.ManageMenu.Body.Frame:FindFirstChild("Manage")
+   if not manageFrame then
+      notify("Error", "Manage frame not found!", "alert-circle")
+      return
+   end
+
+   for _, name in ipairs(upgradeNames) do
+      if manageFrame:FindFirstChild(name) then
+         for i = 1, upgradeTimes do
+            clickUpgradeButton(name)
+            task.wait(0.05)
+         end
+         task.wait(0.05)
+      else
+         warn("Upgrade entry not found: " .. name)
+      end
    end
 end
 
