@@ -225,7 +225,6 @@ local TycoonTab = Window:CreateTab("Tycoon", "building")
 -- SECTION: AUTO UPGRADES (NEW - fireproximityprompt via Purchases folder)
 -- =====================
 TycoonTab:CreateSection("Auto Upgrades")
-TycoonTab:CreateSection("Auto Upgrades")
 
 local autoBuyEnabled = false
 local loopDelay = 2
@@ -324,6 +323,7 @@ TycoonTab:CreateSlider({
       loopDelay = Value
    end,
 })
+
 -- =====================
 -- SECTION: AUTO EXPANSION (OLD - firetouchinterest via Button parts)
 -- =====================
