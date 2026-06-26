@@ -221,7 +221,6 @@ PlayerTab:CreateToggle({
 -- TAB: TYCOON (AUTO)
 -- =====================
 local TycoonTab = Window:CreateTab("Tycoon", "building")
-
 TycoonTab:CreateSection("Auto Upgrades")
 
 local autoBuyEnabled = false
@@ -230,41 +229,45 @@ local loopDelay = 2
 local function buyAllUpgrades()
    local character = localPlayer.Character
    if not character then return end
-   local hrp = character:FindFirstChild("HumanoidRootPart")
-   local humanoid = character:FindFirstChildOfClass("Humanoid")
+
    local foot = character:FindFirstChild("LeftFoot")
-   if not hrp or not foot then
-      notify("Error", "Character parts not found!", "alert-circle")
+   if not foot then
+      Rayfield:Notify({ Title = "Error", Content = "Character parts not found!", Duration = 3, Image = "alert-circle" })
       return
    end
-   local myTycoon = getMyTycoon()
+
+   local myTycoon = nil
+   for i = 1, 10 do
+      local tycoon = workspace:FindFirstChild("Tycoon" .. i)
+      if tycoon then
+         local owner = tycoon:FindFirstChild("Owner")
+         if owner and owner.Value == localPlayer then
+            myTycoon = tycoon
+            break
+         end
+      end
+   end
+
    if not myTycoon then
-      notify("Error", "Could not find your tycoon!", "alert-circle")
+      Rayfield:Notify({ Title = "Error", Content = "Could not find your tycoon!", Duration = 3, Image = "alert-circle" })
       return
    end
-   local originalCFrame = hrp.CFrame
-   local savedAutoRotate = humanoid.AutoRotate
-   humanoid.AutoRotate = false
+
    for _, item in pairs(myTycoon:GetDescendants()) do
       if item.Name == "Button" and item:IsA("BasePart") then
-         local buttonPos = item.Position
-         hrp.CFrame = CFrame.new(buttonPos.X, originalCFrame.Y, buttonPos.Z)
-         task.wait(0.05)
          firetouchinterest(item, foot, 0)
          task.wait(0.1)
          firetouchinterest(item, foot, 1)
-         task.wait(0.05)
+         task.wait(0.1)
       end
    end
-   hrp.CFrame = originalCFrame
-   humanoid.AutoRotate = savedAutoRotate
 end
 
 TycoonTab:CreateButton({
    Name = "Buy All Upgrades (Once)",
    Callback = function()
       buyAllUpgrades()
-      notify("Done", "All upgrades purchased!", "check-circle")
+      Rayfield:Notify({ Title = "Done", Content = "All upgrades purchased!", Duration = 3, Image = "check-circle" })
    end,
 })
 
@@ -275,7 +278,7 @@ TycoonTab:CreateToggle({
    Callback = function(Value)
       autoBuyEnabled = Value
       if autoBuyEnabled then
-         notify("Auto Buy", "Auto buying enabled!", "zap")
+         Rayfield:Notify({ Title = "Auto Buy", Content = "Auto buying enabled!", Duration = 3, Image = "zap" })
          task.spawn(function()
             while autoBuyEnabled do
                buyAllUpgrades()
@@ -283,7 +286,7 @@ TycoonTab:CreateToggle({
             end
          end)
       else
-         notify("Auto Buy", "Auto buying disabled.", "zap-off")
+         Rayfield:Notify({ Title = "Auto Buy", Content = "Auto buying disabled.", Duration = 3, Image = "zap-off" })
       end
    end,
 })
@@ -299,7 +302,6 @@ TycoonTab:CreateSlider({
       loopDelay = Value
    end,
 })
-
 TycoonTab:CreateSection("Rebirth")
 
 local function doRebirth()
