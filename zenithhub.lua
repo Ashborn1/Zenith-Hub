@@ -320,6 +320,79 @@ TycoonTab:CreateSlider({
       loopDelay = Value
    end,
 })
+-- =====================
+-- SECTION: AUTO EXPANSION (OLD - firetouchinterest via Button parts)
+-- =====================
+TycoonTab:CreateSection("Auto Expansion")
+
+local autoExpansionEnabled = false
+local expansionLoopDelay = 2
+
+local function buyAllExpansions()
+   local character = localPlayer.Character
+   if not character then return end
+
+   local foot = character:FindFirstChild("LeftFoot")
+   if not foot then
+      notify("Error", "Character parts not found!", "alert-circle")
+      return
+   end
+
+   local myTycoon = getMyTycoon()
+   if not myTycoon then
+      notify("Error", "Could not find your tycoon!", "alert-circle")
+      return
+   end
+
+   for _, item in pairs(myTycoon:GetDescendants()) do
+      if item.Name == "Button" and item:IsA("BasePart") then
+         firetouchinterest(item, foot, 0)
+         task.wait(0.1)
+         firetouchinterest(item, foot, 1)
+         task.wait(0.1)
+      end
+   end
+end
+
+TycoonTab:CreateButton({
+   Name = "Buy All Expansions (Once)",
+   Callback = function()
+      buyAllExpansions()
+      notify("Done", "All expansions purchased!", "check-circle")
+   end,
+})
+
+TycoonTab:CreateToggle({
+   Name = "Auto Buy Expansions",
+   CurrentValue = false,
+   Flag = "AutoBuyExpansionToggle",
+   Callback = function(Value)
+      autoExpansionEnabled = Value
+      if autoExpansionEnabled then
+         notify("Auto Expansion", "Auto expansions enabled!", "zap")
+         task.spawn(function()
+            while autoExpansionEnabled do
+               buyAllExpansions()
+               task.wait(expansionLoopDelay)
+            end
+         end)
+      else
+         notify("Auto Expansion", "Auto expansions disabled.", "zap-off")
+      end
+   end,
+})
+
+TycoonTab:CreateSlider({
+   Name = "Expansion Buy Delay (seconds)",
+   Range = {1, 10},
+   Increment = 0.5,
+   Suffix = "s",
+   CurrentValue = 2,
+   Flag = "AutoBuyExpansionDelay",
+   Callback = function(Value)
+      expansionLoopDelay = Value
+   end,
+})
 
 -- =====================
 -- REBIRTH
