@@ -1,10 +1,11 @@
+---new one
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "Zenith Hub",
+   Name = "My Tycoon Hub",
    Icon = 0,
-   LoadingTitle = "Sell Lemons Script",
-   LoadingSubtitle = "Monarchs",
+   LoadingTitle = "Tycoon Script",
+   LoadingSubtitle = "Auto Upgrade",
    ShowText = "Hub",
    Theme = "Default",
    ToggleUIKeybind = "Z",
@@ -217,84 +218,52 @@ PlayerTab:CreateToggle({
 })
 
 -- =====================
--- TAB: TYCOON
+-- TAB: TYCOON (AUTO)
 -- =====================
 local TycoonTab = Window:CreateTab("Tycoon", "building")
-
--- =====================
--- SECTION: AUTO UPGRADES (NEW - fireproximityprompt via Purchases folder)
--- =====================
 TycoonTab:CreateSection("Auto Upgrades")
 
 local autoBuyEnabled = false
-local upgradeLoopDelay = 2
-local upgradeTimes = 1
+local loopDelay = 2
+local upgradeTimes = 1 -- how many times to fire each prompt per loop
 
--- Names must match exactly the folder names under PlayerGui.Manage.ManageMenu.Body.Frame.Manage
-local upgradeNames = {
+-- All purchase folder names
+local purchaseNames = {
+   "Lemon Depot",
+   "Lemon Labs",
+   "Lemon Republic",
+   "Lemon Robotics",
+   "Lemon Stand",
+   "Lemon Trading",
    "LemonDash",
-   "LemonDepot",
-   "LemonLabs",
-   "LemonRepublic",
-   "LemonRobotics",
-   "LemonStand",
-   "LemonTrading",
    "LemonX",
 }
 
-local function clickUpgradeButton(name)
-   local success, err = pcall(function()
-      local gui = localPlayer.PlayerGui
-      local btn = gui.Manage.ManageMenu.Body.Frame.Manage[name].Upgrade
-      -- Use firesignal or simulate a mouse click on the ImageButton
-      local vButton = btn
-      vButton.MouseButton1Click:Fire()
-   end)
-   if not success then
-      -- Fallback: try fireclick via VirtualUser if MouseButton1Click:Fire() isn't enough
-      local ok, e2 = pcall(function()
-         local gui = localPlayer.PlayerGui
-         local btn = gui.Manage.ManageMenu.Body.Frame.Manage[name].Upgrade
-         local VirtualUser = game:GetService("VirtualUser")
-         local pos = btn.AbsolutePosition + (btn.AbsoluteSize / 2)
-         VirtualUser:Button1Down(pos, workspace.CurrentCamera.CFrame)
-         task.wait(0.05)
-         VirtualUser:Button1Up(pos, workspace.CurrentCamera.CFrame)
-      end)
-      if not ok then
-         warn("buyAllUpgrades failed on [" .. name .. "]: " .. tostring(e2))
-      end
-   end
-end
-
 local function buyAllUpgrades()
-   -- Check the Manage GUI is open; if not, skip silently
-   local gui = localPlayer.PlayerGui
-   local manageGui = gui:FindFirstChild("Manage")
-   if not manageGui or not manageGui.Enabled then
-      notify("Upgrades", "Open the Manage GUI first!", "alert-circle")
+   local myTycoon = getMyTycoon()
+   if not myTycoon then
+      notify("Error", "Could not find your tycoon!", "alert-circle")
       return
    end
 
-   local manageFrame = manageGui:FindFirstChild("ManageMenu")
-      and manageGui.ManageMenu:FindFirstChild("Body")
-      and manageGui.ManageMenu.Body:FindFirstChild("Frame")
-      and manageGui.ManageMenu.Body.Frame:FindFirstChild("Manage")
-   if not manageFrame then
-      notify("Error", "Manage frame not found!", "alert-circle")
+   local purchases = myTycoon:FindFirstChild("Purchases")
+   if not purchases then
+      notify("Error", "No Purchases folder found!", "alert-circle")
       return
    end
 
-   for _, name in ipairs(upgradeNames) do
-      if manageFrame:FindFirstChild(name) then
+   for _, name in ipairs(purchaseNames) do
+      local success, err = pcall(function()
+         local prompt = purchases[name][name][name].Prompt
          for i = 1, upgradeTimes do
-            clickUpgradeButton(name)
-            task.wait(0.05)
+            fireproximityprompt(prompt)
+            task.wait(0.1)
          end
-         task.wait(0.05)
-      else
-         warn("Upgrade entry not found: " .. name)
+      end)
+      if not success then
+         warn("Failed on " .. name .. ": " .. tostring(err))
       end
+      task.wait(0.1)
    end
 end
 
@@ -323,111 +292,37 @@ TycoonTab:CreateInput({
 TycoonTab:CreateToggle({
    Name = "Auto Buy Upgrades",
    CurrentValue = false,
-   Flag = "AutoBuyUpgradesToggle",
+   Flag = "AutoBuyToggle",
    Callback = function(Value)
       autoBuyEnabled = Value
       if autoBuyEnabled then
-         notify("Auto Buy", "Auto upgrades enabled!", "zap")
+         notify("Auto Buy", "Auto buying enabled!", "zap")
          task.spawn(function()
             while autoBuyEnabled do
                buyAllUpgrades()
-               task.wait(upgradeLoopDelay)
+               task.wait(loopDelay)
             end
          end)
       else
-         notify("Auto Buy", "Auto upgrades disabled.", "zap-off")
+         notify("Auto Buy", "Auto buying disabled.", "zap-off")
       end
    end,
 })
 
 TycoonTab:CreateSlider({
-   Name = "Upgrade Buy Delay (seconds)",
+   Name = "Auto Buy Delay (seconds)",
    Range = {1, 10},
    Increment = 0.5,
    Suffix = "s",
    CurrentValue = 2,
-   Flag = "AutoBuyUpgradeDelay",
+   Flag = "AutoBuyDelay",
    Callback = function(Value)
-      upgradeLoopDelay = Value
+      loopDelay = Value
    end,
 })
 
 -- =====================
--- SECTION: AUTO EXPANSION (OLD - firetouchinterest via Button parts)
--- =====================
-TycoonTab:CreateSection("Auto Expansion")
-
-local autoExpansionEnabled = false
-local expansionLoopDelay = 2
-
-local function buyAllExpansions()
-   local character = localPlayer.Character
-   if not character then return end
-
-   local foot = character:FindFirstChild("LeftFoot")
-   if not foot then
-      notify("Error", "Character parts not found!", "alert-circle")
-      return
-   end
-
-   local myTycoon = getMyTycoon()
-   if not myTycoon then
-      notify("Error", "Could not find your tycoon!", "alert-circle")
-      return
-   end
-
-   for _, item in pairs(myTycoon:GetDescendants()) do
-      if item.Name == "Button" and item:IsA("BasePart") then
-         firetouchinterest(item, foot, 0)
-         task.wait(0.1)
-         firetouchinterest(item, foot, 1)
-         task.wait(0.1)
-      end
-   end
-end
-
-TycoonTab:CreateButton({
-   Name = "Buy All Expansions (Once)",
-   Callback = function()
-      buyAllExpansions()
-      notify("Done", "All expansions purchased!", "check-circle")
-   end,
-})
-
-TycoonTab:CreateToggle({
-   Name = "Auto Buy Expansions",
-   CurrentValue = false,
-   Flag = "AutoBuyExpansionToggle",
-   Callback = function(Value)
-      autoExpansionEnabled = Value
-      if autoExpansionEnabled then
-         notify("Auto Expansion", "Auto expansions enabled!", "zap")
-         task.spawn(function()
-            while autoExpansionEnabled do
-               buyAllExpansions()
-               task.wait(expansionLoopDelay)
-            end
-         end)
-      else
-         notify("Auto Expansion", "Auto expansions disabled.", "zap-off")
-      end
-   end,
-})
-
-TycoonTab:CreateSlider({
-   Name = "Expansion Buy Delay (seconds)",
-   Range = {1, 10},
-   Increment = 0.5,
-   Suffix = "s",
-   CurrentValue = 2,
-   Flag = "AutoBuyExpansionDelay",
-   Callback = function(Value)
-      expansionLoopDelay = Value
-   end,
-})
-
--- =====================
--- SECTION: REBIRTH
+-- REBIRTH
 -- =====================
 TycoonTab:CreateSection("Rebirth")
 
