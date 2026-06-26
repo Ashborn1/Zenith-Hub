@@ -36,11 +36,10 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local TeleportService = game:GetService("TeleportService")
-local StarterGui = game:GetService("StarterGui")
 local localPlayer = Players.LocalPlayer
 
 -- =====================
--- SERVICES & HELPERS
+-- HELPERS
 -- =====================
 local function getCharacterParts()
    local character = localPlayer.Character
@@ -225,41 +224,45 @@ TycoonTab:CreateSection("Auto Upgrades")
 
 local autoBuyEnabled = false
 local loopDelay = 2
+local upgradeTimes = 1 -- how many times to fire each prompt per loop
+
+-- All purchase folder names
+local purchaseNames = {
+   "Lemon Depot",
+   "Lemon Labs",
+   "Lemon Republic",
+   "Lemon Robotics",
+   "Lemon Stand",
+   "Lemon Trading",
+   "LemonDash",
+   "LemonX",
+}
 
 local function buyAllUpgrades()
-   local character = localPlayer.Character
-   if not character then return end
-
-   local foot = character:FindFirstChild("LeftFoot")
-   if not foot then
-      Rayfield:Notify({ Title = "Error", Content = "Character parts not found!", Duration = 3, Image = "alert-circle" })
-      return
-   end
-
-   local myTycoon = nil
-   for i = 1, 10 do
-      local tycoon = workspace:FindFirstChild("Tycoon" .. i)
-      if tycoon then
-         local owner = tycoon:FindFirstChild("Owner")
-         if owner and owner.Value == localPlayer then
-            myTycoon = tycoon
-            break
-         end
-      end
-   end
-
+   local myTycoon = getMyTycoon()
    if not myTycoon then
-      Rayfield:Notify({ Title = "Error", Content = "Could not find your tycoon!", Duration = 3, Image = "alert-circle" })
+      notify("Error", "Could not find your tycoon!", "alert-circle")
       return
    end
 
-   for _, item in pairs(myTycoon:GetDescendants()) do
-      if item.Name == "Button" and item:IsA("BasePart") then
-         firetouchinterest(item, foot, 0)
-         task.wait(0.1)
-         firetouchinterest(item, foot, 1)
-         task.wait(0.1)
+   local purchases = myTycoon:FindFirstChild("Purchases")
+   if not purchases then
+      notify("Error", "No Purchases folder found!", "alert-circle")
+      return
+   end
+
+   for _, name in ipairs(purchaseNames) do
+      local success, err = pcall(function()
+         local prompt = purchases[name][name][name].Prompt
+         for i = 1, upgradeTimes do
+            fireproximityprompt(prompt)
+            task.wait(0.1)
+         end
+      end)
+      if not success then
+         warn("Failed on " .. name .. ": " .. tostring(err))
       end
+      task.wait(0.1)
    end
 end
 
@@ -267,7 +270,21 @@ TycoonTab:CreateButton({
    Name = "Buy All Upgrades (Once)",
    Callback = function()
       buyAllUpgrades()
-      Rayfield:Notify({ Title = "Done", Content = "All upgrades purchased!", Duration = 3, Image = "check-circle" })
+      notify("Done", "All upgrades purchased!", "check-circle")
+   end,
+})
+
+TycoonTab:CreateInput({
+   Name = "Times to Fire Each Upgrade",
+   PlaceholderText = "Enter number (default 1)",
+   RemoveTextAfterFocusLost = false,
+   Flag = "UpgradeTimes",
+   Callback = function(Value)
+      local num = tonumber(Value)
+      if num and num > 0 then
+         upgradeTimes = math.floor(num)
+         notify("Upgrades", "Will fire each upgrade " .. upgradeTimes .. "x per loop.", "hash")
+      end
    end,
 })
 
@@ -278,7 +295,7 @@ TycoonTab:CreateToggle({
    Callback = function(Value)
       autoBuyEnabled = Value
       if autoBuyEnabled then
-         Rayfield:Notify({ Title = "Auto Buy", Content = "Auto buying enabled!", Duration = 3, Image = "zap" })
+         notify("Auto Buy", "Auto buying enabled!", "zap")
          task.spawn(function()
             while autoBuyEnabled do
                buyAllUpgrades()
@@ -286,7 +303,7 @@ TycoonTab:CreateToggle({
             end
          end)
       else
-         Rayfield:Notify({ Title = "Auto Buy", Content = "Auto buying disabled.", Duration = 3, Image = "zap-off" })
+         notify("Auto Buy", "Auto buying disabled.", "zap-off")
       end
    end,
 })
@@ -302,7 +319,15 @@ TycoonTab:CreateSlider({
       loopDelay = Value
    end,
 })
+
+-- =====================
+-- REBIRTH
+-- =====================
 TycoonTab:CreateSection("Rebirth")
+
+local autoRebirthEnabled = false
+local autoRebirthDelay = 5
+local rebirthTimes = 1
 
 local function doRebirth()
    local success, result = pcall(function()
@@ -321,23 +346,41 @@ local function doRebirth()
          notify("Error", "Rebirth remote not found!", "alert-circle")
          return
       end
-      rebirthRemote:InvokeServer(nil)
+      for i = 1, rebirthTimes do
+         if rebirthRemote:IsA("RemoteEvent") then
+            rebirthRemote:FireServer()
+         else
+            rebirthRemote:InvokeServer()
+         end
+         task.wait(0.1)
+      end
    end)
    if not success then
       warn("Rebirth error: " .. tostring(result))
    end
 end
 
+TycoonTab:CreateInput({
+   Name = "Times to Rebirth",
+   PlaceholderText = "Enter number (default 1)",
+   RemoveTextAfterFocusLost = false,
+   Flag = "RebirthTimes",
+   Callback = function(Value)
+      local num = tonumber(Value)
+      if num and num > 0 then
+         rebirthTimes = math.floor(num)
+         notify("Rebirth", "Will rebirth " .. rebirthTimes .. "x per trigger.", "refresh-cw")
+      end
+   end,
+})
+
 TycoonTab:CreateButton({
    Name = "Rebirth (Once)",
    Callback = function()
       doRebirth()
-      notify("Rebirth", "Rebirth triggered!", "refresh-cw")
+      notify("Rebirth", "Rebirth triggered " .. rebirthTimes .. "x!", "refresh-cw")
    end,
 })
-
-local autoRebirthEnabled = false
-local autoRebirthDelay = 5
 
 TycoonTab:CreateToggle({
    Name = "Auto Rebirth",
@@ -378,7 +421,6 @@ local MiscTab = Window:CreateTab("Misc", "settings")
 
 MiscTab:CreateSection("Server")
 
--- Auto Rejoin on Kick/Shutdown
 local autoRejoinEnabled = false
 
 MiscTab:CreateToggle({
@@ -395,11 +437,6 @@ MiscTab:CreateToggle({
    end,
 })
 
--- Listen for kick/shutdown
-game:GetService("Players").LocalPlayer.OnTeleport:Connect(function(state)
-   if state == Enum.TeleportState.Started then return end
-end)
-
 local gameClosing = false
 game:BindToClose(function()
    gameClosing = true
@@ -412,7 +449,6 @@ localPlayer.AncestryChanged:Connect(function()
    end
 end)
 
--- Server Hop
 MiscTab:CreateButton({
    Name = "Server Hop",
    Callback = function()
@@ -439,7 +475,6 @@ MiscTab:CreateButton({
 
 MiscTab:CreateSection("Performance")
 
--- Anti Lag
 local antiLagEnabled = false
 local antiLagConnection = nil
 
@@ -450,13 +485,11 @@ MiscTab:CreateToggle({
    Callback = function(Value)
       antiLagEnabled = Value
       if antiLagEnabled then
-         -- Reduce particle/effect density and distant object updates
          for _, v in pairs(workspace:GetDescendants()) do
             if v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Smoke") or v:IsA("Fire") or v:IsA("Sparkles") then
                v.Enabled = false
             end
          end
-         -- Lower render quality
          settings().Rendering.QualityLevel = 1
          antiLagConnection = workspace.DescendantAdded:Connect(function(v)
             if v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Smoke") or v:IsA("Fire") or v:IsA("Sparkles") then
@@ -479,13 +512,9 @@ MiscTab:CreateToggle({
 
 MiscTab:CreateSection("Info")
 
--- Show Version
 MiscTab:CreateLabel("Hub Version: 1.0.0")
-
--- Show PlaceId
 MiscTab:CreateLabel("Place ID: " .. tostring(game.PlaceId))
 
--- Copy Job ID button
 MiscTab:CreateButton({
    Name = "Copy Server ID to Clipboard",
    Callback = function()
@@ -527,7 +556,7 @@ CustomTab:CreateToggle({
 })
 
 -- =====================
--- INIT NOTIFY
+-- INIT
 -- =====================
 Rayfield:Notify({
    Title = "Hub Loaded",
