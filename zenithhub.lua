@@ -1,11 +1,10 @@
----new one
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "My Tycoon Hub",
+   Name = "Zenith Hub",
    Icon = 0,
-   LoadingTitle = "Tycoon Script",
-   LoadingSubtitle = "Auto Upgrade",
+   LoadingTitle = "Sell Lemons Script",
+   LoadingSubtitle = "Monarchs",
    ShowText = "Hub",
    Theme = "Default",
    ToggleUIKeybind = "Z",
@@ -218,9 +217,14 @@ PlayerTab:CreateToggle({
 })
 
 -- =====================
--- TAB: TYCOON (AUTO)
+-- TAB: TYCOON
 -- =====================
 local TycoonTab = Window:CreateTab("Tycoon", "building")
+
+-- =====================
+-- SECTION: AUTO UPGRADES (NEW - fireproximityprompt via Purchases folder)
+-- =====================
+TycoonTab:CreateSection("Auto Upgrades")
 TycoonTab:CreateSection("Auto Upgrades")
 
 local autoBuyEnabled = false
@@ -395,7 +399,7 @@ TycoonTab:CreateSlider({
 })
 
 -- =====================
--- REBIRTH
+-- SECTION: REBIRTH
 -- =====================
 TycoonTab:CreateSection("Rebirth")
 
