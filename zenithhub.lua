@@ -227,7 +227,7 @@ local TycoonTab = Window:CreateTab("Tycoon", "building")
 TycoonTab:CreateSection("Auto Upgrades")
 
 local autoBuyEnabled = false
-local loopDelay = 2
+local loopDelay = 1
 local upgradeTimes = 1 -- how many times to fire each prompt per loop
 
 -- All purchase folder names
@@ -317,7 +317,7 @@ TycoonTab:CreateSlider({
    Range = {1, 10},
    Increment = 0.5,
    Suffix = "s",
-   CurrentValue = 2,
+   CurrentValue = 1,
    Flag = "AutoBuyDelay",
    Callback = function(Value)
       loopDelay = Value
