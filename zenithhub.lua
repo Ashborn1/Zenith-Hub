@@ -1,10 +1,10 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "My Tycoon Hub",
+   Name = "Zenith Hub",
    Icon = 0,
-   LoadingTitle = "Tycoon Script",
-   LoadingSubtitle = "Auto Upgrade",
+   LoadingTitle = "Sell Lemons Script",
+   LoadingSubtitle = "Monarchs",
    ShowText = "Hub",
    Theme = "Default",
    ToggleUIKeybind = "Z",
