@@ -330,7 +330,7 @@ TycoonTab:CreateSlider({
 TycoonTab:CreateSection("Auto Expansion")
 
 local autoExpansionEnabled = false
-local expansionLoopDelay = 2
+local expansionLoopDelay = 1
 
 local function buyAllExpansions()
    local character = localPlayer.Character
