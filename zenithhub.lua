@@ -217,16 +217,19 @@ PlayerTab:CreateToggle({
 })
 
 -- =====================
--- TAB: TYCOON (AUTO)
+-- TAB: TYCOON
 -- =====================
 local TycoonTab = Window:CreateTab("Tycoon", "building")
+
+-- =====================
+-- SECTION: AUTO UPGRADES (NEW - fireproximityprompt via Purchases folder)
+-- =====================
 TycoonTab:CreateSection("Auto Upgrades")
 
 local autoBuyEnabled = false
-local loopDelay = 2
-local upgradeTimes = 1 -- how many times to fire each prompt per loop
+local upgradeLoopDelay = 2
+local upgradeTimes = 1
 
--- All purchase folder names
 local purchaseNames = {
    "Lemon Depot",
    "Lemon Labs",
@@ -291,37 +294,111 @@ TycoonTab:CreateInput({
 TycoonTab:CreateToggle({
    Name = "Auto Buy Upgrades",
    CurrentValue = false,
-   Flag = "AutoBuyToggle",
+   Flag = "AutoBuyUpgradesToggle",
    Callback = function(Value)
       autoBuyEnabled = Value
       if autoBuyEnabled then
-         notify("Auto Buy", "Auto buying enabled!", "zap")
+         notify("Auto Buy", "Auto upgrades enabled!", "zap")
          task.spawn(function()
             while autoBuyEnabled do
                buyAllUpgrades()
-               task.wait(loopDelay)
+               task.wait(upgradeLoopDelay)
             end
          end)
       else
-         notify("Auto Buy", "Auto buying disabled.", "zap-off")
+         notify("Auto Buy", "Auto upgrades disabled.", "zap-off")
       end
    end,
 })
 
 TycoonTab:CreateSlider({
-   Name = "Auto Buy Delay (seconds)",
+   Name = "Upgrade Buy Delay (seconds)",
    Range = {1, 10},
    Increment = 0.5,
    Suffix = "s",
    CurrentValue = 2,
-   Flag = "AutoBuyDelay",
+   Flag = "AutoBuyUpgradeDelay",
    Callback = function(Value)
-      loopDelay = Value
+      upgradeLoopDelay = Value
    end,
 })
 
 -- =====================
--- REBIRTH
+-- SECTION: AUTO EXPANSION (OLD - firetouchinterest via Button parts)
+-- =====================
+TycoonTab:CreateSection("Auto Expansion")
+
+local autoExpansionEnabled = false
+local expansionLoopDelay = 2
+
+local function buyAllExpansions()
+   local character = localPlayer.Character
+   if not character then return end
+
+   local foot = character:FindFirstChild("LeftFoot")
+   if not foot then
+      notify("Error", "Character parts not found!", "alert-circle")
+      return
+   end
+
+   local myTycoon = getMyTycoon()
+   if not myTycoon then
+      notify("Error", "Could not find your tycoon!", "alert-circle")
+      return
+   end
+
+   for _, item in pairs(myTycoon:GetDescendants()) do
+      if item.Name == "Button" and item:IsA("BasePart") then
+         firetouchinterest(item, foot, 0)
+         task.wait(0.1)
+         firetouchinterest(item, foot, 1)
+         task.wait(0.1)
+      end
+   end
+end
+
+TycoonTab:CreateButton({
+   Name = "Buy All Expansions (Once)",
+   Callback = function()
+      buyAllExpansions()
+      notify("Done", "All expansions purchased!", "check-circle")
+   end,
+})
+
+TycoonTab:CreateToggle({
+   Name = "Auto Buy Expansions",
+   CurrentValue = false,
+   Flag = "AutoBuyExpansionToggle",
+   Callback = function(Value)
+      autoExpansionEnabled = Value
+      if autoExpansionEnabled then
+         notify("Auto Expansion", "Auto expansions enabled!", "zap")
+         task.spawn(function()
+            while autoExpansionEnabled do
+               buyAllExpansions()
+               task.wait(expansionLoopDelay)
+            end
+         end)
+      else
+         notify("Auto Expansion", "Auto expansions disabled.", "zap-off")
+      end
+   end,
+})
+
+TycoonTab:CreateSlider({
+   Name = "Expansion Buy Delay (seconds)",
+   Range = {1, 10},
+   Increment = 0.5,
+   Suffix = "s",
+   CurrentValue = 2,
+   Flag = "AutoBuyExpansionDelay",
+   Callback = function(Value)
+      expansionLoopDelay = Value
+   end,
+})
+
+-- =====================
+-- SECTION: REBIRTH
 -- =====================
 TycoonTab:CreateSection("Rebirth")
 
