@@ -314,10 +314,26 @@ for _, stallName in ipairs(purchaseNames) do
                hrp.CFrame = CFrame.new(promptParent.Position + Vector3.new(0, 3, 0))
                task.wait(0.2)
 
+               -- Quick capability check: does this executor actually expose
+               -- fireproximityprompt? If not, tell the user instead of
+               -- silently looping forever doing nothing.
+               if typeof(fireproximityprompt) ~= "function" then
+                  notify("Unsupported", "fireproximityprompt isn't available on this executor (Delta).", "alert-triangle")
+                  autoStalls[stallName] = false
+                  return
+               end
+
                -- Rapid fire loop - now yields based on the delay slider
                -- so it won't lock up / crash mobile clients.
                while autoStalls[stallName] do
-                  fireproximityprompt(prompt)
+                  local ok, err = pcall(function()
+                     fireproximityprompt(prompt)
+                  end)
+                  if not ok then
+                     notify("Auto Upgrade Error", tostring(err), "alert-triangle")
+                     autoStalls[stallName] = false
+                     break
+                  end
                   task.wait(autoUpgradeDelay)
                end
             end)
