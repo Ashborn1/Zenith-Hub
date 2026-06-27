@@ -354,11 +354,8 @@ TycoonTab:CreateSlider({
 -- =====================
 -- SECTION: REBIRTH
 -- =====================
-TycoonTab:CreateSection("Rebirth")
 
-local autoRebirthEnabled = false
-local autoRebirthDelay = 5
-local rebirthTimes = 1
+TycoonTab:CreateSection("Rebirth")
 
 local function doRebirth()
    local myTycoon = getMyTycoon()
@@ -368,26 +365,7 @@ local function doRebirth()
    local rebirthRemote = remotes:FindFirstChild("Rebirth")
    if not rebirthRemote then return end
    
-   for i = 1, rebirthTimes do
-      if rebirthRemote:IsA("RemoteEvent") then
-         rebirthRemote:FireServer()
-      else
-         rebirthRemote:InvokeServer()
-      end
-      task.wait(0.1)
-   end
 end
-
-TycoonTab:CreateInput({
-   Name = "Times to Rebirth",
-   PlaceholderText = "1",
-   RemoveTextAfterFocusLost = false,
-   Flag = "RebirthTimes",
-   Callback = function(Value)
-      local num = tonumber(Value)
-      if num and num > 0 then rebirthTimes = math.floor(num) end
-   end,
-})
 
 TycoonTab:CreateButton({
    Name = "Rebirth",
@@ -396,42 +374,12 @@ TycoonTab:CreateButton({
    end,
 })
 
-TycoonTab:CreateToggle({
-   Name = "Auto Rebirth",
-   CurrentValue = false,
-   Flag = "AutoRebirthToggle",
-   Callback = function(Value)
-      autoRebirthEnabled = Value
-      if autoRebirthEnabled then
-         task.spawn(function()
-            while autoRebirthEnabled do
-               doRebirth()
-               task.wait(autoRebirthDelay)
-            end
-         end)
-      end
-   end,
-})
-
-TycoonTab:CreateSlider({
-   Name = "Rebirth Delay",
-   Range = {1, 30},
-   Increment = 1,
-   Suffix = "s",
-   CurrentValue = 5,
-   Flag = "AutoRebirthDelay",
-   Callback = function(Value)
-      autoRebirthDelay = Value
-   end,
-})
 -- =====================
 -- SECTION: Evolve
 -- =====================
 TycoonTab:CreateSection("Evolve")
 
-local autoEvolveEnabled = false
-local autoEvolveDelay = 5
-local evolveTimes = 1
+
 
 local function doEvolve()
    local myTycoon = getMyTycoon()
@@ -441,60 +389,12 @@ local function doEvolve()
    local evolveRemote = remotes:FindFirstChild("Evolve")
    if not evolveRemote then return end
    
-   for i = 1, evolveTimes do
-      if evolveRemote:IsA("RemoteEvent") then
-         evolveRemote:FireServer()
-      else
-         evolveRemote:InvokeServer()
-      end
-      task.wait(0.1)
-   end
 end
-
-TycoonTab:CreateInput({
-   Name = "Times to Evolve",
-   PlaceholderText = "1",
-   RemoveTextAfterFocusLost = false,
-   Flag = "EvolveTimes",
-   Callback = function(Value)
-      local num = tonumber(Value)
-      if num and num > 0 then evolveTimes = math.floor(num) end
-   end,
-})
 
 TycoonTab:CreateButton({
    Name = "Evolve",
    Callback = function()
       doEvolve()
-   end,
-})
-
-TycoonTab:CreateToggle({
-   Name = "Auto Evolve",
-   CurrentValue = false,
-   Flag = "AutoEvolveToggle",
-   Callback = function(Value)
-      autoEvolveEnabled = Value
-      if autoEvolveEnabled then
-         task.spawn(function()
-            while autoEvolveEnabled do
-               doEvolve()
-               task.wait(autoEvolveDelay)
-            end
-         end)
-      end
-   end,
-})
-
-TycoonTab:CreateSlider({
-   Name = "Evolve Delay",
-   Range = {1, 30},
-   Increment = 1,
-   Suffix = "s",
-   CurrentValue = 5,
-   Flag = "AutoEvolveDelay",
-   Callback = function(Value)
-      autoEvolveDelay = Value
    end,
 })
 
