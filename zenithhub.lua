@@ -273,7 +273,7 @@ for _, stallName in ipairs(purchaseNames) do
                   return 
                end
                
-               task.wait(0.3) -- Small wait for teleport to register
+                -- Small wait for teleport to register
                
                -- Rapid fire loop - no delays between fires
                while autoStalls[stallName] do
