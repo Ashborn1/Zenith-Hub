@@ -63,6 +63,10 @@ local function getMyTycoon()
    return nil
 end
 
+local function notify(title, content, image)
+   Rayfield:Notify({ Title = title, Content = content, Duration = 3, Image = image })
+end
+
 -- =====================
 -- TAB: PLAYER
 -- =====================
@@ -208,11 +212,16 @@ PlayerTab:CreateToggle({
 -- TAB: TYCOON
 -- =====================
 local TycoonTab = Window:CreateTab("Tycoon", "building")
+
 -- =====================
--- SECTION: AUTO UPGRADE STALL (Teleport Once + Rapid Fire)
+-- SECTION: AUTO UPGRADE STALL (Per-Station Toggles)
 -- =====================
 TycoonTab:CreateSection("Auto Upgrade Stall")
 
+local autoStallDelay = 2
+local upgradeTimes = 1
+
+-- Track which stalls are auto-buying
 local autoStalls = {}
 
 local purchaseNames = {
@@ -240,7 +249,50 @@ local function getStallPrompt(stallName)
    return innerObj:FindFirstChild("Prompt")
 end
 
--- Individual toggle - teleport once then rapid fire
+local function teleportAndBuy(stallName)
+   local prompt = getStallPrompt(stallName)
+   if not prompt then return end
+   local promptParent = prompt.Parent
+   if not promptParent or not promptParent:IsA("BasePart") then return end
+   
+   local hrp = getCharacterParts()
+   if not hrp then return end
+   
+   hrp.CFrame = CFrame.new(promptParent.Position + Vector3.new(0, 4, 0))
+   task.wait(0.25)
+   
+   for i = 1, upgradeTimes do
+      fireproximityprompt(prompt)
+      task.wait(0.1)
+   end
+end
+
+-- Delay slider
+TycoonTab:CreateSlider({
+   Name = "Auto Buy Delay",
+   Range = {1, 10},
+   Increment = 0.5,
+   Suffix = "s",
+   CurrentValue = 2,
+   Flag = "AutoStallDelay",
+   Callback = function(Value)
+      autoStallDelay = Value
+   end,
+})
+
+-- Times input
+TycoonTab:CreateInput({
+   Name = "Times per Loop",
+   PlaceholderText = "1",
+   RemoveTextAfterFocusLost = false,
+   Flag = "UpgradeTimes",
+   Callback = function(Value)
+      local num = tonumber(Value)
+      if num and num > 0 then upgradeTimes = math.floor(num) end
+   end,
+})
+
+-- Individual toggle for each stall
 for _, stallName in ipairs(purchaseNames) do
    autoStalls[stallName] = false
    
@@ -252,38 +304,16 @@ for _, stallName in ipairs(purchaseNames) do
          autoStalls[stallName] = Value
          if Value then
             task.spawn(function()
-               -- Get prompt and teleport once
-               local prompt = getStallPrompt(stallName)
-               if not prompt then 
-                  autoStalls[stallName] = false
-                  return 
-               end
-               
-               local promptParent = prompt.Parent
-               if not promptParent or not promptParent:IsA("BasePart") then 
-                  autoStalls[stallName] = false
-                  return 
-               end
-               
-               local hrp = getCharacterParts()
-               if not hrp then 
-                  autoStalls[stallName] = false
-                  return 
-               end
-               
-               -- Teleport once
-               hrp.CFrame = CFrame.new(promptParent.Position + Vector3.new(0, 3, 0))
-               task.wait(0.2)
-               
-               -- Rapid fire loop - no delays, pure speed
                while autoStalls[stallName] do
-                  fireproximityprompt(prompt)
+                  teleportAndBuy(stallName)
+                  task.wait(autoStallDelay)
                end
             end)
          end
       end,
    })
 end
+
 -- =====================
 -- SECTION: AUTO EXPANSION
 -- =====================
@@ -397,7 +427,7 @@ TycoonTab:CreateToggle({
    Flag = "AutoRebirthToggle",
    Callback = function(Value)
       autoRebirthEnabled = Value
-      if autoExpansionEnabled then
+      if autoRebirthEnabled then
          task.spawn(function()
             while autoRebirthEnabled do
                doRebirth()
@@ -421,7 +451,7 @@ TycoonTab:CreateSlider({
 })
 
 -- =====================
--- TAB: DEVELOPMENT
+-- TAB: DEVELOPMENT (Empty/Minimal)
 -- =====================
 local DevTab = Window:CreateTab("Development", "code")
 
