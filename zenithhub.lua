@@ -356,10 +356,6 @@ TycoonTab:CreateSlider({
 -- =====================
 TycoonTab:CreateSection("Rebirth")
 
-local autoRebirthEnabled = false
-local autoRebirthDelay = 5
-local rebirthTimes = 1
-
 local function doRebirth()
    local myTycoon = getMyTycoon()
    if not myTycoon then return end
@@ -367,27 +363,15 @@ local function doRebirth()
    if not remotes then return end
    local rebirthRemote = remotes:FindFirstChild("Rebirth")
    if not rebirthRemote then return end
-   
-   for i = 1, rebirthTimes do
+
       if rebirthRemote:IsA("RemoteEvent") then
          rebirthRemote:FireServer()
       else
          rebirthRemote:InvokeServer()
       end
       task.wait(0.1)
-   end
 end
 
-TycoonTab:CreateInput({
-   Name = "Times to Rebirth",
-   PlaceholderText = "1",
-   RemoveTextAfterFocusLost = false,
-   Flag = "RebirthTimes",
-   Callback = function(Value)
-      local num = tonumber(Value)
-      if num and num > 0 then rebirthTimes = math.floor(num) end
-   end,
-})
 
 TycoonTab:CreateButton({
    Name = "Rebirth",
@@ -396,34 +380,38 @@ TycoonTab:CreateButton({
    end,
 })
 
-TycoonTab:CreateToggle({
-   Name = "Auto Rebirth",
-   CurrentValue = false,
-   Flag = "AutoRebirthToggle",
-   Callback = function(Value)
-      autoRebirthEnabled = Value
-      if autoRebirthEnabled then
-         task.spawn(function()
-            while autoRebirthEnabled do
-               doRebirth()
-               task.wait(autoRebirthDelay)
-            end
-         end)
+
+-- =====================
+-- SECTION: Evolve
+-- =====================
+TycoonTab:CreateSection("Evolve")
+
+
+local function doEvolve()
+   local myTycoon = getMyTycoon()
+   if not myTycoon then return end
+   local remotes = myTycoon:FindFirstChild("Remotes")
+   if not remotes then return end
+   local evolveRemote = remotes:FindFirstChild("Evolve")
+   if not evolveRemote then return end
+   
+      if evolveRemote:IsA("RemoteEvent") then
+         evolveRemote:FireServer()
+      else
+         evolveRemote:InvokeServer()
       end
+      task.wait(0.1)
+
+end
+
+
+TycoonTab:CreateButton({
+   Name = "Evolve",
+   Callback = function()
+      doEvolve()
    end,
 })
 
-TycoonTab:CreateSlider({
-   Name = "Rebirth Delay",
-   Range = {1, 30},
-   Increment = 1,
-   Suffix = "s",
-   CurrentValue = 5,
-   Flag = "AutoRebirthDelay",
-   Callback = function(Value)
-      autoRebirthDelay = Value
-   end,
-})
 
 -- =====================
 -- TAB: DEVELOPMENT (Empty/Minimal)
