@@ -214,11 +214,15 @@ PlayerTab:CreateToggle({
 local TycoonTab = Window:CreateTab("Tycoon", "building")
 
 -- =====================
--- SECTION: AUTO UPGRADE STALL
+-- SECTION: AUTO UPGRADE STALL (Per-Station Toggles)
 -- =====================
 TycoonTab:CreateSection("Auto Upgrade Stall")
 
+local autoStallDelay = 2
 local upgradeTimes = 1
+
+-- Track which stalls are auto-buying
+local autoStalls = {}
 
 local purchaseNames = {
    "Lemon Depot",
@@ -263,8 +267,22 @@ local function teleportAndBuy(stallName)
    end
 end
 
+-- Delay slider
+TycoonTab:CreateSlider({
+   Name = "Auto Buy Delay",
+   Range = {1, 10},
+   Increment = 0.5,
+   Suffix = "s",
+   CurrentValue = 2,
+   Flag = "AutoStallDelay",
+   Callback = function(Value)
+      autoStallDelay = Value
+   end,
+})
+
+-- Times input
 TycoonTab:CreateInput({
-   Name = "Times to Fire",
+   Name = "Times per Loop",
    PlaceholderText = "1",
    RemoveTextAfterFocusLost = false,
    Flag = "UpgradeTimes",
@@ -274,24 +292,27 @@ TycoonTab:CreateInput({
    end,
 })
 
+-- Individual toggle for each stall
 for _, stallName in ipairs(purchaseNames) do
-   TycoonTab:CreateButton({
-      Name = "Buy: " .. stallName,
-      Callback = function()
-         teleportAndBuy(stallName)
+   autoStalls[stallName] = false
+   
+   TycoonTab:CreateToggle({
+      Name = "Auto: " .. stallName,
+      CurrentValue = false,
+      Flag = "Auto" .. stallName:gsub(" ", ""),
+      Callback = function(Value)
+         autoStalls[stallName] = Value
+         if Value then
+            task.spawn(function()
+               while autoStalls[stallName] do
+                  teleportAndBuy(stallName)
+                  task.wait(autoStallDelay)
+               end
+            end)
+         end
       end,
    })
 end
-
-TycoonTab:CreateButton({
-   Name = "Buy All Stalls",
-   Callback = function()
-      for _, stallName in ipairs(purchaseNames) do
-         teleportAndBuy(stallName)
-         task.wait(0.5)
-      end
-   end,
-})
 
 -- =====================
 -- SECTION: AUTO EXPANSION
@@ -430,107 +451,31 @@ TycoonTab:CreateSlider({
 })
 
 -- =====================
--- TAB: DEVELOPMENT (Remote Buy)
+-- TAB: DEVELOPMENT (Empty/Minimal)
 -- =====================
 local DevTab = Window:CreateTab("Development", "code")
 
-DevTab:CreateSection("Remote Buyer")
-
-local function findPurchaseRemote()
-   local myTycoon = getMyTycoon()
-   if not myTycoon then return nil end
-   local remotes = myTycoon:FindFirstChild("Remotes")
-   if not remotes then return nil end
-   
-   -- Common names
-   local names = {"BuyItem", "Purchase", "BuyUpgrade", "Upgrade", "Buy", "PurchaseItem"}
-   for _, name in ipairs(names) do
-      local r = remotes:FindFirstChild(name)
-      if r then return r end
-   end
-   
-   -- Check for any buy-related
-   for _, child in pairs(remotes:GetChildren()) do
-      local lower = child.Name:lower()
-      if lower:find("buy") or lower:find("purchase") or lower:find("upgrade") then
-         return child
-      end
-   end
-   return nil
-end
-
-local function remoteBuy(stallName)
-   local remote = findPurchaseRemote()
-   if not remote then return end
-   
-   local myTycoon = getMyTycoon()
-   if not myTycoon then return end
-   local purchases = myTycoon:FindFirstChild("Purchases")
-   if not purchases then return end
-   local stall = purchases:FindFirstChild(stallName)
-   if not stall then return end
-   
-   -- Try different argument patterns
-   local patterns = {
-      stallName,
-      stall.Name,
-      stall,
-      stall:FindFirstChild(stallName),
-      stallName:gsub(" ", ""),
-      stallName:lower()
-   }
-   
-   for _, arg in ipairs(patterns) do
-      local success = pcall(function()
-         if remote:IsA("RemoteEvent") then
-            remote:FireServer(arg)
-         else
-            remote:InvokeServer(arg)
-         end
-      end)
-      if success then break end
-   end
-end
-
--- Remote buy buttons for each stall
-for _, stallName in ipairs(purchaseNames) do
-   DevTab:CreateButton({
-      Name = "Remote: " .. stallName,
-      Callback = function()
-         for i = 1, upgradeTimes do
-            remoteBuy(stallName)
-            task.wait(0.1)
-         end
-      end,
-   })
-end
+DevTab:CreateSection("Tools")
 
 DevTab:CreateButton({
-   Name = "Remote Buy All",
-   Callback = function()
-      for _, stallName in ipairs(purchaseNames) do
-         for i = 1, upgradeTimes do
-            remoteBuy(stallName)
-            task.wait(0.1)
-         end
-      end
-   end,
-})
-
-DevTab:CreateSection("Debug")
-
-DevTab:CreateButton({
-   Name = "Scan Remotes",
+   Name = "Print Remotes",
    Callback = function()
       local myTycoon = getMyTycoon()
       if not myTycoon then print("No tycoon") return end
       local remotes = myTycoon:FindFirstChild("Remotes")
-      if not remotes then print("No remotes folder") return end
+      if not remotes then print("No remotes") return end
       
-      print("=== REMOTES ===")
       for _, child in pairs(remotes:GetChildren()) do
          print(child.Name .. " | " .. child.ClassName)
       end
+   end,
+})
+
+DevTab:CreateButton({
+   Name = "Print Tycoon Path",
+   Callback = function()
+      local t = getMyTycoon()
+      if t then print(t:GetFullName()) else print("No tycoon found") end
    end,
 })
 
