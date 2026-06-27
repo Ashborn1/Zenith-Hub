@@ -213,14 +213,11 @@ PlayerTab:CreateToggle({
 -- =====================
 local TycoonTab = Window:CreateTab("Tycoon", "building")
 
--- =====================
--- SECTION: AUTO UPGRADE STALL (Per-Station Toggles)
+--- =====================
+-- SECTION: AUTO UPGRADE STALL (Teleport Once + Rapid Fire)
 -- =====================
 TycoonTab:CreateSection("Auto Upgrade Stall")
 
-local autoStallDelay = 2
-
--- Track which stalls are auto-buying
 local autoStalls = {}
 
 local purchaseNames = {
@@ -248,35 +245,7 @@ local function getStallPrompt(stallName)
    return innerObj:FindFirstChild("Prompt")
 end
 
-local function teleportAndBuy(stallName)
-   local prompt = getStallPrompt(stallName)
-   if not prompt then return end
-   local promptParent = prompt.Parent
-   if not promptParent or not promptParent:IsA("BasePart") then return end
-   
-   local hrp = getCharacterParts()
-   if not hrp then return end
-   
-   hrp.CFrame = CFrame.new(promptParent.Position + Vector3.new(0, 4, 0))
-   task.wait(0.25)
-   
-   fireproximityprompt(prompt)
-end
-
--- Delay slider
-TycoonTab:CreateSlider({
-   Name = "Auto Buy Delay",
-   Range = {1, 10},
-   Increment = 0.5,
-   Suffix = "s",
-   CurrentValue = 2,
-   Flag = "AutoStallDelay",
-   Callback = function(Value)
-      autoStallDelay = Value
-   end,
-})
-
--- Individual toggle for each stall
+-- Individual toggle - teleport once then rapid fire
 for _, stallName in ipairs(purchaseNames) do
    autoStalls[stallName] = false
    
@@ -288,31 +257,61 @@ for _, stallName in ipairs(purchaseNames) do
          autoStalls[stallName] = Value
          if Value then
             task.spawn(function()
+               -- Get prompt and teleport once
+               local prompt = getStallPrompt(stallName)
+               if not prompt then 
+                  autoStalls[stallName] = false
+                  return 
+               end
+               
+               local promptParent = prompt.Parent
+               if not promptParent or not promptParent:IsA("BasePart") then 
+                  autoStalls[stallName] = false
+                  return 
+               end
+               
+               local hrp = getCharacterParts()
+               if not hrp then 
+                  autoStalls[stallName] = false
+                  return 
+               end
+               
+               -- Teleport once
+               hrp.CFrame = CFrame.new(promptParent.Position + Vector3.new(0, 3, 0))
+               task.wait(0.2)
+               
+               -- Rapid fire loop - no delays, pure speed
                while autoStalls[stallName] do
-                  teleportAndBuy(stallName)
-                  task.wait(autoStallDelay)
+                  fireproximityprompt(prompt)
                end
             end)
          end
       end,
    })
 end
-
 -- =====================
--- SECTION: AUTO EXPANSION
+-- SECTION: AUTO EXPANSION (OLD - firetouchinterest via Button parts)
 -- =====================
 TycoonTab:CreateSection("Auto Expansion")
 
 local autoExpansionEnabled = false
-local expansionLoopDelay = 1
+local expansionLoopDelay = 2
 
 local function buyAllExpansions()
    local character = localPlayer.Character
    if not character then return end
+
    local foot = character:FindFirstChild("LeftFoot")
-   if not foot then return end
+   if not foot then
+      notify("Error", "Character parts not found!", "alert-circle")
+      return
+   end
+
    local myTycoon = getMyTycoon()
-   if not myTycoon then return end
+   if not myTycoon then
+      notify("Error", "Could not find your tycoon!", "alert-circle")
+      return
+   end
 
    for _, item in pairs(myTycoon:GetDescendants()) do
       if item.Name == "Button" and item:IsA("BasePart") then
@@ -325,9 +324,10 @@ local function buyAllExpansions()
 end
 
 TycoonTab:CreateButton({
-   Name = "Buy All Expansions",
+   Name = "Buy All Expansions (Once)",
    Callback = function()
       buyAllExpansions()
+      notify("Done", "All expansions purchased!", "check-circle")
    end,
 })
 
@@ -338,18 +338,21 @@ TycoonTab:CreateToggle({
    Callback = function(Value)
       autoExpansionEnabled = Value
       if autoExpansionEnabled then
+         notify("Auto Expansion", "Auto expansions enabled!", "zap")
          task.spawn(function()
             while autoExpansionEnabled do
                buyAllExpansions()
                task.wait(expansionLoopDelay)
             end
          end)
+      else
+         notify("Auto Expansion", "Auto expansions disabled.", "zap-off")
       end
    end,
 })
 
 TycoonTab:CreateSlider({
-   Name = "Expansion Delay",
+   Name = "Expansion Buy Delay (seconds)",
    Range = {1, 10},
    Increment = 0.5,
    Suffix = "s",
@@ -359,15 +362,10 @@ TycoonTab:CreateSlider({
       expansionLoopDelay = Value
    end,
 })
-
 -- =====================
 -- SECTION: REBIRTH
 -- =====================
 TycoonTab:CreateSection("Rebirth")
-
-local autoRebirthEnabled = false
-local autoRebirthDelay = 5
-local rebirthTimes = 1
 
 local function doRebirth()
    local myTycoon = getMyTycoon()
@@ -376,27 +374,15 @@ local function doRebirth()
    if not remotes then return end
    local rebirthRemote = remotes:FindFirstChild("Rebirth")
    if not rebirthRemote then return end
-   
-   for i = 1, rebirthTimes do
+
       if rebirthRemote:IsA("RemoteEvent") then
          rebirthRemote:FireServer()
       else
          rebirthRemote:InvokeServer()
       end
       task.wait(0.1)
-   end
 end
 
-TycoonTab:CreateInput({
-   Name = "Times to Rebirth",
-   PlaceholderText = "1",
-   RemoveTextAfterFocusLost = false,
-   Flag = "RebirthTimes",
-   Callback = function(Value)
-      local num = tonumber(Value)
-      if num and num > 0 then rebirthTimes = math.floor(num) end
-   end,
-})
 
 TycoonTab:CreateButton({
    Name = "Rebirth",
@@ -405,34 +391,38 @@ TycoonTab:CreateButton({
    end,
 })
 
-TycoonTab:CreateToggle({
-   Name = "Auto Rebirth",
-   CurrentValue = false,
-   Flag = "AutoRebirthToggle",
-   Callback = function(Value)
-      autoRebirthEnabled = Value
-      if autoExpansionEnabled then
-         task.spawn(function()
-            while autoRebirthEnabled do
-               doRebirth()
-               task.wait(autoRebirthDelay)
-            end
-         end)
+
+-- =====================
+-- SECTION: Evolve
+-- =====================
+TycoonTab:CreateSection("Evolve")
+
+
+local function doEvolve()
+   local myTycoon = getMyTycoon()
+   if not myTycoon then return end
+   local remotes = myTycoon:FindFirstChild("Remotes")
+   if not remotes then return end
+   local evolveRemote = remotes:FindFirstChild("Evolve")
+   if not evolveRemote then return end
+   
+      if evolveRemote:IsA("RemoteEvent") then
+         evolveRemote:FireServer()
+      else
+         evolveRemote:InvokeServer()
       end
+      task.wait(0.1)
+
+end
+
+
+TycoonTab:CreateButton({
+   Name = "Evolve",
+   Callback = function()
+      doEvolve()
    end,
 })
 
-TycoonTab:CreateSlider({
-   Name = "Rebirth Delay",
-   Range = {1, 30},
-   Increment = 1,
-   Suffix = "s",
-   CurrentValue = 5,
-   Flag = "AutoRebirthDelay",
-   Callback = function(Value)
-      autoRebirthDelay = Value
-   end,
-})
 
 -- =====================
 -- TAB: DEVELOPMENT (Empty/Minimal)
