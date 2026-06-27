@@ -63,10 +63,6 @@ local function getMyTycoon()
    return nil
 end
 
-local function notify(title, content, image)
-   Rayfield:Notify({ Title = title, Content = content, Duration = 3, Image = image })
-end
-
 -- =====================
 -- TAB: PLAYER
 -- =====================
@@ -214,13 +210,10 @@ PlayerTab:CreateToggle({
 local TycoonTab = Window:CreateTab("Tycoon", "building")
 
 -- =====================
--- SECTION: AUTO UPGRADE STALL (Per-Station Toggles)
+-- SECTION: AUTO UPGRADE STALL (Rapid Fire)
 -- =====================
 TycoonTab:CreateSection("Auto Upgrade Stall")
 
-local autoStallDelay = 2
-
--- Track which stalls are auto-buying
 local autoStalls = {}
 
 local purchaseNames = {
@@ -248,35 +241,20 @@ local function getStallPrompt(stallName)
    return innerObj:FindFirstChild("Prompt")
 end
 
-local function teleportAndBuy(stallName)
+local function teleportToStall(stallName)
    local prompt = getStallPrompt(stallName)
-   if not prompt then return end
+   if not prompt then return nil end
    local promptParent = prompt.Parent
-   if not promptParent or not promptParent:IsA("BasePart") then return end
+   if not promptParent or not promptParent:IsA("BasePart") then return nil end
    
    local hrp = getCharacterParts()
-   if not hrp then return end
+   if not hrp then return nil end
    
    hrp.CFrame = CFrame.new(promptParent.Position + Vector3.new(0, 4, 0))
-   task.wait(0.25)
-   
-   fireproximityprompt(prompt)
+   return prompt
 end
 
--- Delay slider
-TycoonTab:CreateSlider({
-   Name = "Auto Buy Delay",
-   Range = {1, 10},
-   Increment = 0.5,
-   Suffix = "s",
-   CurrentValue = 2,
-   Flag = "AutoStallDelay",
-   Callback = function(Value)
-      autoStallDelay = Value
-   end,
-})
-
--- Individual toggle for each stall
+-- Individual toggle for each stall - rapid fire loop
 for _, stallName in ipairs(purchaseNames) do
    autoStalls[stallName] = false
    
@@ -288,9 +266,19 @@ for _, stallName in ipairs(purchaseNames) do
          autoStalls[stallName] = Value
          if Value then
             task.spawn(function()
+               -- Teleport once then rapid fire
+               local prompt = teleportToStall(stallName)
+               if not prompt then 
+                  autoStalls[stallName] = false
+                  return 
+               end
+               
+               task.wait(0.3) -- Small wait for teleport to register
+               
+               -- Rapid fire loop - no delays between fires
                while autoStalls[stallName] do
-                  teleportAndBuy(stallName)
-                  task.wait(autoStallDelay)
+                  fireproximityprompt(prompt)
+                  -- No task.wait - pure rapid fire
                end
             end)
          end
@@ -435,7 +423,7 @@ TycoonTab:CreateSlider({
 })
 
 -- =====================
--- TAB: DEVELOPMENT (Empty/Minimal)
+-- TAB: DEVELOPMENT
 -- =====================
 local DevTab = Window:CreateTab("Development", "code")
 
