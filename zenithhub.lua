@@ -161,13 +161,7 @@ PlayerTab:CreateToggle({
    Flag = "FlyToggle",
    Callback = function(Value)
       flyEnabled = Value
-      if flyEnabled then
-         enableFly()
-         notify("Fly", "Fly enabled! WASD + Space/Shift to move.", "plane")
-      else
-         disableFly()
-         notify("Fly", "Fly disabled.", "plane-off")
-      end
+      if flyEnabled then enableFly() else disableFly() end
    end,
 })
 
@@ -202,7 +196,6 @@ PlayerTab:CreateToggle({
                if part:IsA("BasePart") then part.CanCollide = false end
             end
          end)
-         notify("NoClip", "NoClip enabled.", "ghost")
       else
          if noclipConnection then noclipConnection:Disconnect() noclipConnection = nil end
          local character = localPlayer.Character
@@ -211,7 +204,6 @@ PlayerTab:CreateToggle({
                if part:IsA("BasePart") then part.CanCollide = true end
             end
          end
-         notify("NoClip", "NoClip disabled.", "ghost")
       end
    end,
 })
@@ -222,15 +214,15 @@ PlayerTab:CreateToggle({
 local TycoonTab = Window:CreateTab("Tycoon", "building")
 
 -- =====================
--- SECTION: AUTO UPGRADES (NEW - fireproximityprompt via Purchases folder)
+-- SECTION: AUTO UPGRADE STALL (Per-Station Toggles)
 -- =====================
-TycoonTab:CreateSection("Auto Upgrades")
+TycoonTab:CreateSection("Auto Upgrade Stall")
 
-local autoBuyEnabled = false
-local loopDelay = 2
-local upgradeTimes = 1 -- how many times to fire each prompt per loop
+local autoStallDelay = 2
 
--- All purchase folder names
+-- Track which stalls are auto-buying
+local autoStalls = {}
+
 local purchaseNames = {
    "Lemon Depot",
    "Lemon Labs",
@@ -242,90 +234,72 @@ local purchaseNames = {
    "LemonX",
 }
 
-local function buyAllUpgrades()
+local function getStallPrompt(stallName)
    local myTycoon = getMyTycoon()
-   if not myTycoon then
-      notify("Error", "Could not find your tycoon!", "alert-circle")
-      return
-   end
-
+   if not myTycoon then return nil end
    local purchases = myTycoon:FindFirstChild("Purchases")
-   if not purchases then
-      notify("Error", "No Purchases folder found!", "alert-circle")
-      return
-   end
-
-   for _, name in ipairs(purchaseNames) do
-      local success, err = pcall(function()
-         local prompt = purchases[name][name][name].Prompt
-         for i = 1, upgradeTimes do
-            fireproximityprompt(prompt)
-            task.wait(0.1)
-         end
-      end)
-      if not success then
-         warn("Failed on " .. name .. ": " .. tostring(err))
-      end
-      task.wait(0.1)
-   end
+   if not purchases then return nil end
+   local stall = purchases:FindFirstChild(stallName)
+   if not stall then return nil end
+   local promptObj = stall:FindFirstChild(stallName)
+   if not promptObj then return nil end
+   local innerObj = promptObj:FindFirstChild(stallName)
+   if not innerObj then return nil end
+   return innerObj:FindFirstChild("Prompt")
 end
 
-TycoonTab:CreateButton({
-   Name = "Buy All Upgrades (Once)",
-   Callback = function()
-      buyAllUpgrades()
-      notify("Done", "All upgrades purchased!", "check-circle")
-   end,
-})
+local function teleportAndBuy(stallName)
+   local prompt = getStallPrompt(stallName)
+   if not prompt then return end
+   local promptParent = prompt.Parent
+   if not promptParent or not promptParent:IsA("BasePart") then return end
+   
+   local hrp = getCharacterParts()
+   if not hrp then return end
+   
+   hrp.CFrame = CFrame.new(promptParent.Position + Vector3.new(0, 4, 0))
+   task.wait(0.25)
+   
+   fireproximityprompt(prompt)
+end
 
-TycoonTab:CreateInput({
-   Name = "Times to Fire Each Upgrade",
-   PlaceholderText = "Enter number (default 1)",
-   RemoveTextAfterFocusLost = false,
-   Flag = "UpgradeTimes",
-   Callback = function(Value)
-      local num = tonumber(Value)
-      if num and num > 0 then
-         upgradeTimes = math.floor(num)
-         notify("Upgrades", "Will fire each upgrade " .. upgradeTimes .. "x per loop.", "hash")
-      end
-   end,
-})
-
-TycoonTab:CreateToggle({
-   Name = "Auto Buy Upgrades",
-   CurrentValue = false,
-   Flag = "AutoBuyToggle",
-   Callback = function(Value)
-      autoBuyEnabled = Value
-      if autoBuyEnabled then
-         notify("Auto Buy", "Auto buying enabled!", "zap")
-         task.spawn(function()
-            while autoBuyEnabled do
-               buyAllUpgrades()
-               task.wait(loopDelay)
-            end
-         end)
-      else
-         notify("Auto Buy", "Auto buying disabled.", "zap-off")
-      end
-   end,
-})
-
+-- Delay slider
 TycoonTab:CreateSlider({
-   Name = "Auto Buy Delay (seconds)",
+   Name = "Auto Buy Delay",
    Range = {1, 10},
    Increment = 0.5,
    Suffix = "s",
    CurrentValue = 2,
-   Flag = "AutoBuyDelay",
+   Flag = "AutoStallDelay",
    Callback = function(Value)
-      loopDelay = Value
+      autoStallDelay = Value
    end,
 })
 
+-- Individual toggle for each stall
+for _, stallName in ipairs(purchaseNames) do
+   autoStalls[stallName] = false
+   
+   TycoonTab:CreateToggle({
+      Name = "Auto: " .. stallName,
+      CurrentValue = false,
+      Flag = "Auto" .. stallName:gsub(" ", ""),
+      Callback = function(Value)
+         autoStalls[stallName] = Value
+         if Value then
+            task.spawn(function()
+               while autoStalls[stallName] do
+                  teleportAndBuy(stallName)
+                  task.wait(autoStallDelay)
+               end
+            end)
+         end
+      end,
+   })
+end
+
 -- =====================
--- SECTION: AUTO EXPANSION (OLD - firetouchinterest via Button parts)
+-- SECTION: AUTO EXPANSION
 -- =====================
 TycoonTab:CreateSection("Auto Expansion")
 
@@ -335,18 +309,10 @@ local expansionLoopDelay = 1
 local function buyAllExpansions()
    local character = localPlayer.Character
    if not character then return end
-
    local foot = character:FindFirstChild("LeftFoot")
-   if not foot then
-      notify("Error", "Character parts not found!", "alert-circle")
-      return
-   end
-
+   if not foot then return end
    local myTycoon = getMyTycoon()
-   if not myTycoon then
-      notify("Error", "Could not find your tycoon!", "alert-circle")
-      return
-   end
+   if not myTycoon then return end
 
    for _, item in pairs(myTycoon:GetDescendants()) do
       if item.Name == "Button" and item:IsA("BasePart") then
@@ -359,10 +325,9 @@ local function buyAllExpansions()
 end
 
 TycoonTab:CreateButton({
-   Name = "Buy All Expansions (Once)",
+   Name = "Buy All Expansions",
    Callback = function()
       buyAllExpansions()
-      notify("Done", "All expansions purchased!", "check-circle")
    end,
 })
 
@@ -373,21 +338,18 @@ TycoonTab:CreateToggle({
    Callback = function(Value)
       autoExpansionEnabled = Value
       if autoExpansionEnabled then
-         notify("Auto Expansion", "Auto expansions enabled!", "zap")
          task.spawn(function()
             while autoExpansionEnabled do
                buyAllExpansions()
                task.wait(expansionLoopDelay)
             end
          end)
-      else
-         notify("Auto Expansion", "Auto expansions disabled.", "zap-off")
       end
    end,
 })
 
 TycoonTab:CreateSlider({
-   Name = "Expansion Buy Delay (seconds)",
+   Name = "Expansion Delay",
    Range = {1, 10},
    Increment = 0.5,
    Suffix = "s",
@@ -408,55 +370,38 @@ local autoRebirthDelay = 5
 local rebirthTimes = 1
 
 local function doRebirth()
-   local success, result = pcall(function()
-      local myTycoon = getMyTycoon()
-      if not myTycoon then
-         notify("Error", "Could not find your tycoon!", "alert-circle")
-         return
+   local myTycoon = getMyTycoon()
+   if not myTycoon then return end
+   local remotes = myTycoon:FindFirstChild("Remotes")
+   if not remotes then return end
+   local rebirthRemote = remotes:FindFirstChild("Rebirth")
+   if not rebirthRemote then return end
+   
+   for i = 1, rebirthTimes do
+      if rebirthRemote:IsA("RemoteEvent") then
+         rebirthRemote:FireServer()
+      else
+         rebirthRemote:InvokeServer()
       end
-      local remotes = myTycoon:FindFirstChild("Remotes")
-      if not remotes then
-         notify("Error", "No Remotes folder found!", "alert-circle")
-         return
-      end
-      local rebirthRemote = remotes:FindFirstChild("Rebirth")
-      if not rebirthRemote then
-         notify("Error", "Rebirth remote not found!", "alert-circle")
-         return
-      end
-      for i = 1, rebirthTimes do
-         if rebirthRemote:IsA("RemoteEvent") then
-            rebirthRemote:FireServer()
-         else
-            rebirthRemote:InvokeServer()
-         end
-         task.wait(0.1)
-      end
-   end)
-   if not success then
-      warn("Rebirth error: " .. tostring(result))
+      task.wait(0.1)
    end
 end
 
 TycoonTab:CreateInput({
    Name = "Times to Rebirth",
-   PlaceholderText = "Enter number (default 1)",
+   PlaceholderText = "1",
    RemoveTextAfterFocusLost = false,
    Flag = "RebirthTimes",
    Callback = function(Value)
       local num = tonumber(Value)
-      if num and num > 0 then
-         rebirthTimes = math.floor(num)
-         notify("Rebirth", "Will rebirth " .. rebirthTimes .. "x per trigger.", "refresh-cw")
-      end
+      if num and num > 0 then rebirthTimes = math.floor(num) end
    end,
 })
 
 TycoonTab:CreateButton({
-   Name = "Rebirth (Once)",
+   Name = "Rebirth",
    Callback = function()
       doRebirth()
-      notify("Rebirth", "Rebirth triggered " .. rebirthTimes .. "x!", "refresh-cw")
    end,
 })
 
@@ -466,22 +411,19 @@ TycoonTab:CreateToggle({
    Flag = "AutoRebirthToggle",
    Callback = function(Value)
       autoRebirthEnabled = Value
-      if autoRebirthEnabled then
-         notify("Auto Rebirth", "Auto rebirth enabled!", "refresh-cw")
+      if autoExpansionEnabled then
          task.spawn(function()
             while autoRebirthEnabled do
                doRebirth()
                task.wait(autoRebirthDelay)
             end
          end)
-      else
-         notify("Auto Rebirth", "Auto rebirth disabled.", "refresh-cw")
       end
    end,
 })
 
 TycoonTab:CreateSlider({
-   Name = "Auto Rebirth Delay (seconds)",
+   Name = "Rebirth Delay",
    Range = {1, 30},
    Increment = 1,
    Suffix = "s",
@@ -489,6 +431,35 @@ TycoonTab:CreateSlider({
    Flag = "AutoRebirthDelay",
    Callback = function(Value)
       autoRebirthDelay = Value
+   end,
+})
+
+-- =====================
+-- TAB: DEVELOPMENT (Empty/Minimal)
+-- =====================
+local DevTab = Window:CreateTab("Development", "code")
+
+DevTab:CreateSection("Tools")
+
+DevTab:CreateButton({
+   Name = "Print Remotes",
+   Callback = function()
+      local myTycoon = getMyTycoon()
+      if not myTycoon then print("No tycoon") return end
+      local remotes = myTycoon:FindFirstChild("Remotes")
+      if not remotes then print("No remotes") return end
+      
+      for _, child in pairs(remotes:GetChildren()) do
+         print(child.Name .. " | " .. child.ClassName)
+      end
+   end,
+})
+
+DevTab:CreateButton({
+   Name = "Print Tycoon Path",
+   Callback = function()
+      local t = getMyTycoon()
+      if t then print(t:GetFullName()) else print("No tycoon found") end
    end,
 })
 
@@ -502,16 +473,11 @@ MiscTab:CreateSection("Server")
 local autoRejoinEnabled = false
 
 MiscTab:CreateToggle({
-   Name = "Auto Rejoin (Kick/Shutdown)",
+   Name = "Auto Rejoin",
    CurrentValue = false,
    Flag = "AutoRejoin",
    Callback = function(Value)
       autoRejoinEnabled = Value
-      if autoRejoinEnabled then
-         notify("Auto Rejoin", "Will rejoin if kicked or server shuts down.", "rotate-cw")
-      else
-         notify("Auto Rejoin", "Auto rejoin disabled.", "rotate-cw")
-      end
    end,
 })
 
@@ -530,24 +496,21 @@ end)
 MiscTab:CreateButton({
    Name = "Server Hop",
    Callback = function()
-      notify("Server Hop", "Hopping to a new server...", "shuffle")
       local success, servers = pcall(function()
          return game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100")
       end)
-      if not success then
-         notify("Server Hop", "Failed to fetch servers.", "alert-circle")
-         return
-      end
+      if not success then return end
+      
       local HttpService = game:GetService("HttpService")
       local data = HttpService:JSONDecode(servers)
       local currentJobId = game.JobId
+      
       for _, server in pairs(data.data) do
          if server.id ~= currentJobId and server.playing < server.maxPlayers then
             TeleportService:TeleportToPlaceInstance(game.PlaceId, server.id, localPlayer)
             return
          end
       end
-      notify("Server Hop", "No available servers found.", "alert-circle")
    end,
 })
 
@@ -574,7 +537,6 @@ MiscTab:CreateToggle({
                v.Enabled = false
             end
          end)
-         notify("Anti Lag", "Anti lag enabled. Effects disabled.", "zap")
       else
          if antiLagConnection then antiLagConnection:Disconnect() antiLagConnection = nil end
          for _, v in pairs(workspace:GetDescendants()) do
@@ -583,21 +545,19 @@ MiscTab:CreateToggle({
             end
          end
          settings().Rendering.QualityLevel = 10
-         notify("Anti Lag", "Anti lag disabled. Effects restored.", "zap-off")
       end
    end,
 })
 
 MiscTab:CreateSection("Info")
 
-MiscTab:CreateLabel("Hub Version: 1.0.0")
+MiscTab:CreateLabel("Hub Version: 2.0.0")
 MiscTab:CreateLabel("Place ID: " .. tostring(game.PlaceId))
 
 MiscTab:CreateButton({
-   Name = "Copy Server ID to Clipboard",
+   Name = "Copy Server ID",
    Callback = function()
       setclipboard(game.JobId)
-      notify("Copied", "Server Job ID copied to clipboard!", "clipboard")
    end,
 })
 
@@ -616,20 +576,6 @@ CustomTab:CreateDropdown({
    MultipleOptions = false,
    Callback = function(Option)
       Rayfield:SetTheme(Option[1] or Option)
-      notify("Theme", "Theme changed to " .. tostring(Option[1] or Option), "palette")
-   end,
-})
-
-CustomTab:CreateSection("Notifications")
-
-local notifySounds = true
-CustomTab:CreateToggle({
-   Name = "Notify on Auto Buy",
-   CurrentValue = false,
-   Flag = "BuyNotify",
-   Callback = function(Value)
-      notifySounds = Value
-      notify("Notifications", Value and "Buy notifications enabled." or "Buy notifications disabled.", "bell")
    end,
 })
 
@@ -638,7 +584,7 @@ CustomTab:CreateToggle({
 -- =====================
 Rayfield:Notify({
    Title = "Hub Loaded",
-   Content = "Tycoon Hub v1.0.0 ready! Press Z to toggle.",
-   Duration = 5,
+   Content = "Zenith Hub v2.0.0 ready",
+   Duration = 3,
    Image = "rocket",
 })
