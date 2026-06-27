@@ -208,9 +208,8 @@ PlayerTab:CreateToggle({
 -- TAB: TYCOON
 -- =====================
 local TycoonTab = Window:CreateTab("Tycoon", "building")
-
 -- =====================
--- SECTION: AUTO UPGRADE STALL (Rapid Fire)
+-- SECTION: AUTO UPGRADE STALL (Teleport Once + Rapid Fire)
 -- =====================
 TycoonTab:CreateSection("Auto Upgrade Stall")
 
@@ -241,20 +240,7 @@ local function getStallPrompt(stallName)
    return innerObj:FindFirstChild("Prompt")
 end
 
-local function teleportToStall(stallName)
-   local prompt = getStallPrompt(stallName)
-   if not prompt then return nil end
-   local promptParent = prompt.Parent
-   if not promptParent or not promptParent:IsA("BasePart") then return nil end
-   
-   local hrp = getCharacterParts()
-   if not hrp then return nil end
-   
-   hrp.CFrame = CFrame.new(promptParent.Position + Vector3.new(0, 4, 0))
-   return prompt
-end
-
--- Individual toggle for each stall - rapid fire loop
+-- Individual toggle - teleport once then rapid fire
 for _, stallName in ipairs(purchaseNames) do
    autoStalls[stallName] = false
    
@@ -266,26 +252,38 @@ for _, stallName in ipairs(purchaseNames) do
          autoStalls[stallName] = Value
          if Value then
             task.spawn(function()
-               -- Teleport once then rapid fire
-               local prompt = teleportToStall(stallName)
+               -- Get prompt and teleport once
+               local prompt = getStallPrompt(stallName)
                if not prompt then 
                   autoStalls[stallName] = false
                   return 
                end
                
-                -- Small wait for teleport to register
+               local promptParent = prompt.Parent
+               if not promptParent or not promptParent:IsA("BasePart") then 
+                  autoStalls[stallName] = false
+                  return 
+               end
                
-               -- Rapid fire loop - no delays between fires
+               local hrp = getCharacterParts()
+               if not hrp then 
+                  autoStalls[stallName] = false
+                  return 
+               end
+               
+               -- Teleport once
+               hrp.CFrame = CFrame.new(promptParent.Position + Vector3.new(0, 3, 0))
+               task.wait(0.2)
+               
+               -- Rapid fire loop - no delays, pure speed
                while autoStalls[stallName] do
                   fireproximityprompt(prompt)
-                  -- No task.wait - pure rapid fire
                end
             end)
          end
       end,
    })
 end
-
 -- =====================
 -- SECTION: AUTO EXPANSION
 -- =====================
