@@ -110,21 +110,6 @@ localPlayer.CharacterAdded:Connect(function(character)
    humanoid.JumpPower = currentJumpPower
 end)
 
--- Continuously re-apply WalkSpeed/JumpPower every frame.
--- This fixes the "resets back to normal" issue, which happens when the
--- game (or a state change like ragdoll/sit/tool equip) overwrites the
--- Humanoid properties after you set them once.
-RunService.Heartbeat:Connect(function()
-   local _, humanoid, _ = getCharacterParts()
-   if not humanoid then return end
-   if humanoid.WalkSpeed ~= currentWalkSpeed then
-      humanoid.WalkSpeed = currentWalkSpeed
-   end
-   if humanoid.JumpPower ~= currentJumpPower then
-      humanoid.JumpPower = currentJumpPower
-   end
-end)
-
 PlayerTab:CreateSection("Fly")
 
 local flyEnabled = false
@@ -231,28 +216,9 @@ local TycoonTab = Window:CreateTab("Tycoon", "building")
 --- =====================
 -- SECTION: AUTO UPGRADE STALL (Teleport Once + Rapid Fire)
 -- =====================
-TycoonTab:CreateSection("Auto Upgrade Stall (PC ONLY FEATURE!!!!)")
+TycoonTab:CreateSection("Auto Upgrade Stall")
 
 local autoStalls = {}
-
--- Delay between each fireproximityprompt call in the rapid-fire loop.
--- 0 = max speed (PC only, can crash mobile clients since the loop never yields).
--- Raise this on mobile (try 0.05 - 0.1s) to stop crashes.
-local autoUpgradeDelay = 0.05
-
-PlayerTab = PlayerTab -- (no-op, keeping tab refs untouched)
-
-TycoonTab:CreateSlider({
-   Name = "Auto Upgrade Delay (Mobile Safe)",
-   Range = {0, 1},
-   Increment = 0.01,
-   Suffix = "s",
-   CurrentValue = 0.05,
-   Flag = "AutoUpgradeDelay",
-   Callback = function(Value)
-      autoUpgradeDelay = Value
-   end,
-})
 
 local purchaseNames = {
    "Lemon Depot",
@@ -279,10 +245,10 @@ local function getStallPrompt(stallName)
    return innerObj:FindFirstChild("Prompt")
 end
 
--- Individual toggle - teleport once then rapid fire (with adjustable delay)
+-- Individual toggle - teleport once then rapid fire
 for _, stallName in ipairs(purchaseNames) do
    autoStalls[stallName] = false
-
+   
    TycoonTab:CreateToggle({
       Name = "Auto: " .. stallName,
       CurrentValue = false,
@@ -293,48 +259,30 @@ for _, stallName in ipairs(purchaseNames) do
             task.spawn(function()
                -- Get prompt and teleport once
                local prompt = getStallPrompt(stallName)
-               if not prompt then
+               if not prompt then 
                   autoStalls[stallName] = false
-                  return
+                  return 
                end
-
+               
                local promptParent = prompt.Parent
-               if not promptParent or not promptParent:IsA("BasePart") then
+               if not promptParent or not promptParent:IsA("BasePart") then 
                   autoStalls[stallName] = false
-                  return
+                  return 
                end
-
+               
                local hrp = getCharacterParts()
-               if not hrp then
+               if not hrp then 
                   autoStalls[stallName] = false
-                  return
+                  return 
                end
-
+               
                -- Teleport once
                hrp.CFrame = CFrame.new(promptParent.Position + Vector3.new(0, 3, 0))
                task.wait(0.2)
-
-               -- Quick capability check: does this executor actually expose
-               -- fireproximityprompt? If not, tell the user instead of
-               -- silently looping forever doing nothing.
-               if typeof(fireproximityprompt) ~= "function" then
-                  notify("Unsupported", "fireproximityprompt isn't available on this executor (Delta).", "alert-triangle")
-                  autoStalls[stallName] = false
-                  return
-               end
-
-               -- Rapid fire loop - now yields based on the delay slider
-               -- so it won't lock up / crash mobile clients.
+               
+               -- Rapid fire loop - no delays, pure speed
                while autoStalls[stallName] do
-                  local ok, err = pcall(function()
-                     fireproximityprompt(prompt)
-                  end)
-                  if not ok then
-                     notify("Auto Upgrade Error", tostring(err), "alert-triangle")
-                     autoStalls[stallName] = false
-                     break
-                  end
-                  task.wait(autoUpgradeDelay)
+                  fireproximityprompt(prompt)
                end
             end)
          end
@@ -457,7 +405,7 @@ local function doEvolve()
    if not remotes then return end
    local evolveRemote = remotes:FindFirstChild("Evolve")
    if not evolveRemote then return end
-
+   
       if evolveRemote:IsA("RemoteEvent") then
          evolveRemote:FireServer()
       else
@@ -490,7 +438,7 @@ DevTab:CreateButton({
       if not myTycoon then print("No tycoon") return end
       local remotes = myTycoon:FindFirstChild("Remotes")
       if not remotes then print("No remotes") return end
-
+      
       for _, child in pairs(remotes:GetChildren()) do
          print(child.Name .. " | " .. child.ClassName)
       end
@@ -542,11 +490,11 @@ MiscTab:CreateButton({
          return game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100")
       end)
       if not success then return end
-
+      
       local HttpService = game:GetService("HttpService")
       local data = HttpService:JSONDecode(servers)
       local currentJobId = game.JobId
-
+      
       for _, server in pairs(data.data) do
          if server.id ~= currentJobId and server.playing < server.maxPlayers then
             TeleportService:TeleportToPlaceInstance(game.PlaceId, server.id, localPlayer)
