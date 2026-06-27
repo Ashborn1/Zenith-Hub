@@ -313,13 +313,6 @@ local function buyAllExpansions()
    end
 end
 
-TycoonTab:CreateButton({
-   Name = "Buy All Expansions",
-   Callback = function()
-      buyAllExpansions()
-   end,
-})
-
 TycoonTab:CreateToggle({
    Name = "Auto Buy Expansions",
    CurrentValue = false,
