@@ -365,7 +365,7 @@ local function doRebirth()
    local rebirthRemote = remotes:FindFirstChild("Rebirth")
    if not rebirthRemote then return end
    
-end
+
 
 TycoonTab:CreateButton({
    Name = "Rebirth",
@@ -389,7 +389,7 @@ local function doEvolve()
    local evolveRemote = remotes:FindFirstChild("Evolve")
    if not evolveRemote then return end
    
-end
+
 
 TycoonTab:CreateButton({
    Name = "Evolve",
