@@ -425,12 +425,12 @@ TycoonTab:CreateSlider({
    end,
 })
 -- =====================
--- SECTION: Evolove
+-- SECTION: Evolve
 -- =====================
-TycoonTab:CreateSection("Evolove")
+TycoonTab:CreateSection("Evolve")
 
-local autoEvoloveEnabled = false
-local autoEvoloveDelay = 5
+local autoEvolveEnabled = false
+local autoEvolveDelay = 5
 local evolveTimes = 1
 
 local function doEvolve()
@@ -438,7 +438,7 @@ local function doEvolve()
    if not myTycoon then return end
    local remotes = myTycoon:FindFirstChild("Remotes")
    if not remotes then return end
-   local evolveRemote = remotes:FindFirstChild("Evolove")
+   local evolveRemote = remotes:FindFirstChild("Evolve")
    if not evolveRemote then return end
    
    for i = 1, evolveTimes do
