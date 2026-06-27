@@ -231,7 +231,7 @@ local TycoonTab = Window:CreateTab("Tycoon", "building")
 --- =====================
 -- SECTION: AUTO UPGRADE STALL (Teleport Once + Rapid Fire)
 -- =====================
-TycoonTab:CreateSection("Auto Upgrade Stall")
+TycoonTab:CreateSection("Auto Upgrade Stall (PC ONLY FEATURE!!!!)")
 
 local autoStalls = {}
 
