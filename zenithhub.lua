@@ -295,7 +295,7 @@ end
 TycoonTab:CreateSection("Auto Expansion")
 
 local autoExpansionEnabled = false
-local expansionLoopDelay = 1
+
 
 local function buyAllExpansions()
    local character = localPlayer.Character
@@ -308,19 +308,10 @@ local function buyAllExpansions()
    for _, item in pairs(myTycoon:GetDescendants()) do
       if item.Name == "Button" and item:IsA("BasePart") then
          firetouchinterest(item, foot, 0)
-         task.wait(0.1)
          firetouchinterest(item, foot, 1)
-         task.wait(0.1)
       end
    end
 end
-
-TycoonTab:CreateButton({
-   Name = "Buy All Expansions",
-   Callback = function()
-      buyAllExpansions()
-   end,
-})
 
 TycoonTab:CreateToggle({
    Name = "Auto Buy Expansions",
@@ -332,25 +323,11 @@ TycoonTab:CreateToggle({
          task.spawn(function()
             while autoExpansionEnabled do
                buyAllExpansions()
-               task.wait(expansionLoopDelay)
             end
          end)
       end
    end,
 })
-
-TycoonTab:CreateSlider({
-   Name = "Expansion Delay",
-   Range = {1, 10},
-   Increment = 0.5,
-   Suffix = "s",
-   CurrentValue = 2,
-   Flag = "AutoBuyExpansionDelay",
-   Callback = function(Value)
-      expansionLoopDelay = Value
-   end,
-})
-
 -- =====================
 -- SECTION: REBIRTH
 -- =====================
