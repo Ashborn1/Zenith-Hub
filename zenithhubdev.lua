@@ -219,7 +219,6 @@ local TycoonTab = Window:CreateTab("Tycoon", "building")
 TycoonTab:CreateSection("Auto Upgrade Stall")
 
 local autoStallDelay = 2
-local upgradeTimes = 1
 
 -- Track which stalls are auto-buying
 local autoStalls = {}
@@ -261,10 +260,7 @@ local function teleportAndBuy(stallName)
    hrp.CFrame = CFrame.new(promptParent.Position + Vector3.new(0, 4, 0))
    task.wait(0.25)
    
-   for i = 1, upgradeTimes do
-      fireproximityprompt(prompt)
-      task.wait(0.1)
-   end
+   fireproximityprompt(prompt)
 end
 
 -- Delay slider
@@ -277,18 +273,6 @@ TycoonTab:CreateSlider({
    Flag = "AutoStallDelay",
    Callback = function(Value)
       autoStallDelay = Value
-   end,
-})
-
--- Times input
-TycoonTab:CreateInput({
-   Name = "Times per Loop",
-   PlaceholderText = "1",
-   RemoveTextAfterFocusLost = false,
-   Flag = "UpgradeTimes",
-   Callback = function(Value)
-      local num = tonumber(Value)
-      if num and num > 0 then upgradeTimes = math.floor(num) end
    end,
 })
 
@@ -427,7 +411,7 @@ TycoonTab:CreateToggle({
    Flag = "AutoRebirthToggle",
    Callback = function(Value)
       autoRebirthEnabled = Value
-      if autoRebirthEnabled then
+      if autoExpansionEnabled then
          task.spawn(function()
             while autoRebirthEnabled do
                doRebirth()
