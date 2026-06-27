@@ -213,15 +213,11 @@ PlayerTab:CreateToggle({
 -- =====================
 local TycoonTab = Window:CreateTab("Tycoon", "building")
 
--- =====================
--- SECTION: AUTO UPGRADE STALL (Per-Station Toggles)
+--- =====================
+-- SECTION: AUTO UPGRADE STALL (Teleport Once + Rapid Fire)
 -- =====================
 TycoonTab:CreateSection("Auto Upgrade Stall")
 
-local autoStallDelay = 2
-local upgradeTimes = 1
-
--- Track which stalls are auto-buying
 local autoStalls = {}
 
 local purchaseNames = {
@@ -249,50 +245,7 @@ local function getStallPrompt(stallName)
    return innerObj:FindFirstChild("Prompt")
 end
 
-local function teleportAndBuy(stallName)
-   local prompt = getStallPrompt(stallName)
-   if not prompt then return end
-   local promptParent = prompt.Parent
-   if not promptParent or not promptParent:IsA("BasePart") then return end
-   
-   local hrp = getCharacterParts()
-   if not hrp then return end
-   
-   hrp.CFrame = CFrame.new(promptParent.Position + Vector3.new(0, 4, 0))
-   task.wait(0.25)
-   
-   for i = 1, upgradeTimes do
-      fireproximityprompt(prompt)
-      task.wait(0.1)
-   end
-end
-
--- Delay slider
-TycoonTab:CreateSlider({
-   Name = "Auto Buy Delay",
-   Range = {1, 10},
-   Increment = 0.5,
-   Suffix = "s",
-   CurrentValue = 2,
-   Flag = "AutoStallDelay",
-   Callback = function(Value)
-      autoStallDelay = Value
-   end,
-})
-
--- Times input
-TycoonTab:CreateInput({
-   Name = "Times per Loop",
-   PlaceholderText = "1",
-   RemoveTextAfterFocusLost = false,
-   Flag = "UpgradeTimes",
-   Callback = function(Value)
-      local num = tonumber(Value)
-      if num and num > 0 then upgradeTimes = math.floor(num) end
-   end,
-})
-
--- Individual toggle for each stall
+-- Individual toggle - teleport once then rapid fire
 for _, stallName in ipairs(purchaseNames) do
    autoStalls[stallName] = false
    
@@ -304,16 +257,38 @@ for _, stallName in ipairs(purchaseNames) do
          autoStalls[stallName] = Value
          if Value then
             task.spawn(function()
+               -- Get prompt and teleport once
+               local prompt = getStallPrompt(stallName)
+               if not prompt then 
+                  autoStalls[stallName] = false
+                  return 
+               end
+               
+               local promptParent = prompt.Parent
+               if not promptParent or not promptParent:IsA("BasePart") then 
+                  autoStalls[stallName] = false
+                  return 
+               end
+               
+               local hrp = getCharacterParts()
+               if not hrp then 
+                  autoStalls[stallName] = false
+                  return 
+               end
+               
+               -- Teleport once
+               hrp.CFrame = CFrame.new(promptParent.Position + Vector3.new(0, 3, 0))
+               task.wait(0.2)
+               
+               -- Rapid fire loop - no delays, pure speed
                while autoStalls[stallName] do
-                  teleportAndBuy(stallName)
-                  task.wait(autoStallDelay)
+                  fireproximityprompt(prompt)
                end
             end)
          end
       end,
    })
 end
-
 -- =====================
 -- SECTION: AUTO EXPANSION
 -- =====================
