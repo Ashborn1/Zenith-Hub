@@ -283,6 +283,7 @@ for _, stallName in ipairs(purchaseNames) do
                -- Rapid fire loop - no delays, pure speed
                while autoStalls[stallName] do
                   fireproximityprompt(prompt)
+                  task.wait(0.1)
                end
             end)
          end
