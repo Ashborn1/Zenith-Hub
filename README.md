@@ -39,5 +39,3 @@ A lightweight, user-friendly, and continuously maintained **Roblox scripting hub
 > 📝 *Have a game you'd like Zenith-Hub to support? Open an issue on GitHub with the game name and requested features.*
 
 ---
-
-## 🗂️ Project Structure
