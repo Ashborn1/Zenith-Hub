@@ -3,7 +3,7 @@
 ![Status](https://img.shields.io/badge/Status-Active-success)
 ![Language](https://img.shields.io/badge/Language-Lua-blue)
 ![Platform](https://img.shields.io/badge/Platform-Roblox-red)
-
+![License](https://img.shields.io/badge/License-MIT-yellow)
 
 A lightweight, user-friendly, and continuously maintained **Roblox scripting hub** designed to enhance gameplay across a variety of popular Roblox titles. Built with performance, reliability, and a clean UI in mind.
 
