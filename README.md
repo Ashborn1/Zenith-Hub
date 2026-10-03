@@ -32,25 +32,12 @@ A lightweight, user-friendly, and continuously maintained **Roblox scripting hub
 
 | Game | Status | Features |
 | :--- | :--- | :--- |
-| **Blox Fruits** | ✅ Supported | Auto-Farm, ESP, Teleports |
-| **Pet Simulator 99** | ✅ Supported | Auto-Collect, Auto-Hatch |
-| **Arsenal** | ✅ Supported | Aimbot, ESP, Silent Aim |
-| **Tower Defense Simulator** | ⚠️ Partial | Auto-Place, Cash Farm |
-| **More coming soon...** | 🔄 In Progress | Request a game in the Issues tab! |
+| **Sell Lemons** | ✅ Supported | Auto-Farm, Auto-Sell, ESP |
+| **Boulder Game** | 🔄 In Development | Basic Automation, Auto-Collect |
+| **More coming soon...** | 📝 Planned | Request a game in the Issues tab! |
 
 > 📝 *Have a game you'd like Zenith-Hub to support? Open an issue on GitHub with the game name and requested features.*
 
 ---
 
-## 🚀 Getting Started
-
-### Prerequisites
-- A Roblox script executor (e.g., Synapse X, Krnl, Fluxus, Solara, etc.)
-- Basic knowledge of executing scripts in Roblox
-
-### Installation
-
-1. Copy the following `loadstring` code:
-
-```lua
-loadstring(game:HttpGet("https://raw.githubusercontent.com/Ashborn1/Zenith-Hub/main/loader.lua"))()
+## 🗂️ Project Structure
